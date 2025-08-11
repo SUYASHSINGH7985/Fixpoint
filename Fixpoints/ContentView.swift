@@ -1100,7 +1100,7 @@ struct ChatSupportView: View {
                     .padding(.horizontal, 40)
             }
             .padding(.top, 30)
-            
+
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 12) {
@@ -1111,12 +1111,15 @@ struct ChatSupportView: View {
                     }
                     .padding()
                 }
-                .onChange(of: messages.count) { _ in
+                .onChange(of: messages.count) {
                     withAnimation {
-                        proxy.scrollTo(messages.last?.id, anchor: .bottom)
+                        if let lastID = messages.last?.id {
+                            proxy.scrollTo(lastID, anchor: .bottom)
+                        }
                     }
                 }
             }
+
             
             // Message input area
             HStack {
