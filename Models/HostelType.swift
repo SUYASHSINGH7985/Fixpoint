@@ -6,8 +6,8 @@ enum HostelType: String, Codable, CaseIterable {
     
     var icon: String {
         switch self {
-        case .boys: return "figure.arms.open"
-        case .girls: return "figure.dress"
+        case .boys: return "figure.walk"       // male-style figure
+        case .girls: return "figure.stand"     // female-style figure
         }
     }
     
@@ -20,8 +20,8 @@ enum HostelType: String, Codable, CaseIterable {
     
     var blocks: [String] {
         switch self {
-        case .boys: return ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "P", "Q", "R", "S", "T"]
-        case .girls: return ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
+        case .boys: return ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","P","Q","R","S","T"]
+        case .girls: return ["A","B","C","D","E","F","G","H","I","J"]
         }
     }
 }
