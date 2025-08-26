@@ -30,11 +30,12 @@ struct ChatSupportView: View {
                     }
                     .padding()
                 }
-                .onChange(of: messages.count) { _ in
+                .onChange(of: messages.count) { newCount, oldCount in
                     withAnimation {
                         proxy.scrollTo(messages.last?.id, anchor: .bottom)
                     }
                 }
+
             }
             
             // Message input area
