@@ -1,8 +1,11 @@
 import SwiftUI
+import MessageUI
 
 struct SettingsView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var userSettings: UserSettings
+    @State private var showMailView = false
+    @State private var showMailError = false
     
     var body: some View {
         Form {
@@ -58,15 +61,34 @@ struct SettingsView: View {
             }
             
             Section(header: Text("Support").font(.headline)) {
-                Button(action: {}) {
+                Button(action: {
+                    if MFMailComposeViewController.canSendMail() {
+                        showMailView = true
+                    } else {
+                        showMailError = true
+                    }
+                }) {
                     HStack {
                         Image(systemName: "envelope.fill")
                             .foregroundColor(.blue)
                         Text("Contact Support")
                     }
                 }
+                .sheet(isPresented: $showMailView) {
+                    MailView(
+                        subject: "FixPoints App Support",
+                        toRecipients: ["support@fixpoints.com"]
+                    )
+                }
+                .alert("Mail is not set up on this device", isPresented: $showMailError) {
+                    Button("OK", role: .cancel) { }
+                }
                 
-                Button(action: {}) {
+                Button(action: {
+                    if let url = URL(string: "https://apps.apple.com/app/idYOUR_APP_ID") {
+                        UIApplication.shared.open(url)
+                    }
+                }) {
                     HStack {
                         Image(systemName: "star.fill")
                             .foregroundColor(.yellow)
@@ -84,4 +106,19 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
     }
+}
+
+// MARK: - MailView Wrapper
+struct MailView: UIViewControllerRepresentable {
+    let subject: String
+    let toRecipients: [String]
+    
+    func makeUIViewController(context: Context) -> MFMailComposeViewController {
+        let vc = MFMailComposeViewController()
+        vc.setSubject(subject)
+        vc.setToRecipients(toRecipients)
+        return vc
+    }
+    
+    func updateUIViewController(_ uiViewController: MFMailComposeViewController, context: Context) {}
 }

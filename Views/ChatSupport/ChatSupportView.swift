@@ -1,89 +1,119 @@
 import SwiftUI
 
+struct ChatMessage: Identifiable {
+    let id = UUID()
+    let text: String
+    let isUser: Bool
+}
+
 struct ChatSupportView: View {
-    @State private var messages: [Message] = [
-        Message(text: "Hello! I'm your FixPoints support assistant. How can I help you today?", isUser: false)
-    ]
-    @State private var newMessage = ""
+    @State private var messages: [ChatMessage] = []
+    @State private var inputText: String = ""
+    @State private var isLoading = false
+    
+    // 🔑 Replace with your Gemini API Key
+    let apiKey = "AIzaSyCxo5uQK9zi9DrrMRHwr5sL7s3E8mkL-mU"
+    let endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
     
     var body: some View {
         VStack {
-            // Header with improved design
-            VStack(spacing: 10) {
-                Text("Premium Support")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(.blue)
-                
-                Divider()
-                    .padding(.horizontal, 40)
-            }
-            .padding(.top, 30)
-            
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(spacing: 12) {
-                        ForEach(messages) { message in
-                            MessageBubble(message: message)
-                                .id(message.id)
+            ScrollView {
+                ForEach(messages) { message in
+                    HStack {
+                        if message.isUser {
+                            Spacer()
+                            Text(message.text)
+                                .padding()
+                                .background(Color.blue.opacity(0.2))
+                                .cornerRadius(10)
+                                .frame(maxWidth: 250, alignment: .trailing)
+                        } else {
+                            Text(message.text)
+                                .padding()
+                                .background(Color.gray.opacity(0.2))
+                                .cornerRadius(10)
+                                .frame(maxWidth: 250, alignment: .leading)
+                            Spacer()
                         }
                     }
-                    .padding()
+                    .padding(.horizontal)
+                    .padding(.vertical, 4)
                 }
-                .onChange(of: messages.count) { newCount, oldCount in
-                    withAnimation {
-                        proxy.scrollTo(messages.last?.id, anchor: .bottom)
-                    }
-                }
-
             }
             
-            // Message input area
             HStack {
-                TextField("Type your message...", text: $newMessage)
-                    .textFieldStyle(.roundedBorder)
-                    .padding(.leading, 8)
+                TextField("Type a message...", text: $inputText)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(.horizontal)
                 
-                Button(action: sendMessage) {
-                    Image(systemName: "paperplane.fill")
-                        .foregroundColor(.white)
-                        .padding(12)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .clipShape(Circle())
+                if isLoading {
+                    ProgressView()
+                        .padding(.trailing)
+                } else {
+                    Button(action: {
+                        sendMessage()
+                    }) {
+                        Image(systemName: "paperplane.fill")
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.blue)
+                            .clipShape(Circle())
+                    }
+                    .padding(.trailing)
                 }
-                .disabled(newMessage.isEmpty)
             }
-            .padding()
+            .padding(.bottom)
         }
     }
     
-    private func sendMessage() {
-        guard !newMessage.isEmpty else { return }
-        
-        let userMessage = Message(text: newMessage, isUser: true)
+    func sendMessage() {
+        guard !inputText.isEmpty else { return }
+        let userMessage = ChatMessage(text: inputText, isUser: true)
         messages.append(userMessage)
+        let prompt = inputText
+        inputText = ""
         
-        // Clear input
-        newMessage = ""
-        
-        // Simulate response
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            let responses = [
-                "I understand your concern. Our team will look into this issue.",
-                "Thanks for reporting this. We'll assign someone to your case shortly.",
-                "I've noted your complaint. Our maintenance team will contact you soon.",
-                "We appreciate your feedback. This will be resolved within 24 hours.",
-                "I'm sorry to hear about this issue. We're prioritizing your complaint."
-            ]
-            
-            let response = responses.randomElement() ?? "We've received your complaint and will respond shortly."
-            messages.append(Message(text: response, isUser: false))
+        isLoading = true
+        Task {
+            if let response = await callGeminiAPI(prompt: prompt) {
+                let botMessage = ChatMessage(text: response, isUser: false)
+                messages.append(botMessage)
+            } else {
+                let errorMessage = ChatMessage(text: "⚠️ Error: No response from Gemini.", isUser: false)
+                messages.append(errorMessage)
+            }
+            isLoading = false
         }
+    }
+    
+    func callGeminiAPI(prompt: String) async -> String? {
+        guard let url = URL(string: "\(endpoint)?key=\(apiKey)") else { return nil }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "contents": [
+                ["parts": [["text": prompt]]]
+            ]
+        ]
+        
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(for: request)
+            
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let candidates = json["candidates"] as? [[String: Any]],
+               let content = candidates.first?["content"] as? [String: Any],
+               let parts = content["parts"] as? [[String: Any]],
+               let text = parts.first?["text"] as? String {
+                return text
+            }
+        } catch {
+            print("❌ API Error: \(error)")
+        }
+        return nil
     }
 }

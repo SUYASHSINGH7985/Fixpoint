@@ -17,3 +17,4 @@ struct Complaint: Identifiable, Codable {
         case resolved = "✅ Resolved"
     }
 }
+    

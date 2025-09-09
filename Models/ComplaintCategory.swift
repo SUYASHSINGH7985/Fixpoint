@@ -30,7 +30,7 @@ struct ComplaintCategory: Identifiable {
         ComplaintCategory(
             name: "Cleaning",
             icon: "bubbles.and.sparkles.fill",
-            subcategories: ["Room", "Bathroom", "Common Area", "Other"]
+            subcategories: ["Room", "Other"]
         ),
         ComplaintCategory(
             name: "Security",
